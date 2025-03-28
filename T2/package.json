@@ -4,6 +4,8 @@
   "description": "",
   "main": "test.js",
   "scripts": {
+    "build": "cd t2_as && npm run asbuild",
+    "test": "cd t2_as && npm run test",
     "submit-test": "node test.js"
   },
   "type": "module",
