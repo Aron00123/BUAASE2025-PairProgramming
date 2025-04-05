@@ -1,8 +1,18 @@
 // The entry file of your WebAssembly module.
 
-export function add(a: i32, b: i32): i32 {
-  return a + b;
+// 定义积分变量
+let score: i32 = 0;
+
+// 获取当前积分
+export function getScore(): i32 {
+  return score;
 }
+
+// 更新积分（蛇吃到果子时调用）
+export function updateScore(): void {
+  score += 1;
+}
+
 // 辅助函数：判断方向是否反向
 function isReverseDirection(currentDir: i32, newDir: i32): bool {
     const oppositeMap: Int32Array = new Int32Array(4); // 各方向的相反方向映射
@@ -224,7 +234,7 @@ export class Direction {
     let scoredDirs = new Array<ScoredDirs>();
   
     for (let i = 0; i < validDirs.length; i++) {
-      let dirCode = validDirs[i];
+      let dirCode = validDirs[i]; // 当前抉择方向
       let dir = directions[dirCode];
       let newX = headX + dir.dx;
       let newY = headY + dir.dy;
@@ -239,19 +249,24 @@ export class Direction {
           minFruitDist = i32(dist);
         }
       }
-      score += 300 / (minFruitDist + 1);
+      score += 5 * (2 * board_size - minFruitDist); //能让我更接近果子加分越多
   
       let dangerKey = newX.toString() + "," + newY.toString();
-      if (dangerMap.has(dangerKey)) {
+      if (dangerMap.has(dangerKey)) { //若当前方向有威胁
         let dangerLevel = dangerMap.get(dangerKey)!;
-        score -= dangerLevel * 5;
+        if (board_size === 8 && getScore() < 30) {
+          score -= dangerLevel * 20;
+        } else {
+          score -= dangerLevel * 8;  
+        }
         // 尝试逆向避让
         for (let s = 0; s < snake_num; s++) {
           let start = s * 8;
           let snake = other_snakes.slice(start, start + 8);
           let otherDir = getCurrentDirection(snake[0], snake[1], snake[2], snake[3]);
-          if (dirCode == ((otherDir + 2) % 4)) {
-            score += 15;
+          if (dirCode == ((otherDir + 2) % 4) && ((currentDir + otherDir) % 2 == 1) && evaluateOpponentCollision(newX, newY, snake)) {
+            // 该方向是对方的反向且当前方向与对方方向垂直
+            score += 15; //如若该方向是对方的反向，则加分
           }
         }
       }
@@ -272,6 +287,28 @@ export class Direction {
       else return a.code - b.code;
     });
   
+    // 检查新位置是否与果子重合
+    let newHeadX = headX + directions[scoredDirs[0].code].dx;
+    let newHeadY = headY + directions[scoredDirs[0].code].dy;
+
+    for (let i = 0; i < fruit_num; i++) {
+      let fruitX = fruit_pos[i * 2];
+      let fruitY = fruit_pos[i * 2 + 1];
+      if (newHeadX === fruitX && newHeadY === fruitY) {
+        updateScore(); // 调用内置积分器加分
+        break;
+      }
+    }
+
     return scoredDirs[0].code;
   }
+
+function evaluateOpponentCollision(newX: i32, newY: i32, snake: Array<i32>): bool {
+  for (let i: i32 = 0; i < snake.length; i += 2) {
+    if (snake[i] === newX && snake[i + 1] === newY) {
+      return true;
+    }
+  }
+  return false;
+}
   
